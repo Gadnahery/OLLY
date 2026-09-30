@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const [recipeItems, setRecipeItems] = useState([])
   const [saving, setSaving] = useState(false)
   const [showAddProduct, setShowAddProduct] = useState(false)
-  const [newProduct, setNewProduct] = useState({ name: '', type: 'finished_good', unit: 'pcs', selling_price: '', cost_price: '', reorder_level: '' })
+  const [newProduct, setNewProduct] = useState({ name: '', type: 'finished_good', unit: 'pcs', selling_price: '', cost_price: '', reorder_level: '', opening_stock: '' })
   const [profile, setProfile] = useState({ full_name: '', business_name: 'OLLY', phone: '' })
   const [editProduct, setEditProduct] = useState(null)
 
@@ -125,18 +125,30 @@ export default function SettingsPage() {
     if (!newProduct.name.trim()) return
     setSaving(true)
     try {
-      const { error } = await supabase.from('products').insert({
+      const { data: prod, error } = await supabase.from('products').insert({
         name: newProduct.name.trim(),
         type: newProduct.type,
         unit: newProduct.unit || 'pcs',
         selling_price: Number(newProduct.selling_price) || 0,
         cost_price: Number(newProduct.cost_price) || 0,
         reorder_level: Number(newProduct.reorder_level) || 0,
-      })
+      }).select().single()
       if (error) throw error
+      const opening = Number(newProduct.opening_stock) || 0
+      if (opening > 0 && prod?.id) {
+        const { error: mErr } = await supabase.from('inventory_movements').insert({
+          product_id: prod.id,
+          movement_type: 'adjustment',
+          quantity: opening,
+          unit_cost: Number(newProduct.cost_price) || 0,
+          notes: 'Opening stock',
+          reference_type: 'opening',
+        })
+        if (mErr) throw mErr
+      }
       addToast(lang === 'sw' ? 'Bidhaa imeongezwa' : 'Product added')
       setShowAddProduct(false)
-      setNewProduct({ name: '', type: 'finished_good', unit: 'pcs', selling_price: '', cost_price: '', reorder_level: '' })
+      setNewProduct({ name: '', type: 'finished_good', unit: 'pcs', selling_price: '', cost_price: '', reorder_level: '', opening_stock: '' })
       await load()
     } catch (e) {
       addToast(e.message, 'error')

@@ -42,7 +42,7 @@ export default function DashboardPage() {
 
         const toCollect = (custBal || []).reduce((s, r) => s + Number(r.outstanding || 0), 0)
         const toPay = (supBal || []).reduce((s, r) => s + Number(r.outstanding || 0), 0)
-        const low = (inv || []).filter((i) => i.products && Number(i.quantity) <= Number(i.products.reorder_level || 0))
+        const low = (inv || []).filter((i) => i.products && Number(i.products.reorder_level || 0) > 0 && Number(i.quantity) <= Number(i.products.reorder_level))
         const summary = { raw: 0, packaging: 0, finished: 0 }
         for (const i of inv || []) {
           if (!i.products) continue

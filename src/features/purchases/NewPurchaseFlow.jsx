@@ -6,6 +6,7 @@ import { formatMoney } from '../../utils/format'
 import { Button } from '../../components/ui/Button'
 import { SelectionCard } from '../../components/ui/SelectionCard'
 import { cn } from '../../utils/cn'
+import { isOnline, enqueue } from '../../lib/offline'
 
 export default function NewPurchaseFlow() {
   const navigate = useNavigate()
@@ -68,12 +69,18 @@ export default function NewPurchaseFlow() {
         quantity: i.qty,
         unit_cost: i.unitCost,
       }))
-      const { data, error: err } = await supabase.rpc('record_purchase', {
+      const payload = {
         p_supplier_id: supplierId,
         p_items: items,
         p_payment_method: paymentMethod,
         p_paid_amount: paidAmount ?? (paymentMethod === 'credit' ? 0 : total),
-      })
+      }
+      if (!isOnline()) {
+        await enqueue({ type: 'purchase', payload })
+        setSuccess({ total, offline: true })
+        return
+      }
+      const { data, error: err } = await supabase.rpc('record_purchase', payload)
       if (err) throw err
       setSuccess(data)
     } catch (e) {

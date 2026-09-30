@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
 import { cn } from '../../utils/cn'
+import { isOnline, enqueue } from '../../lib/offline'
 import { FilterChips } from '../../components/ui/FilterChips'
 
 export default function InventoryPage() {
@@ -68,13 +69,24 @@ export default function InventoryPage() {
     if (!selected || adjustQty === '' || Number(adjustQty) === 0) return
     setSaving(true)
     try {
-      const { error } = await supabase.rpc('adjust_stock', {
+      const payload = {
         p_product_id: selected.id,
         p_quantity: Number(adjustQty),
         p_notes: adjustNote || (Number(adjustQty) > 0 ? 'Stock in' : 'Stock out / write-off'),
         p_lot_number: lotNumber || null,
         p_expiry_date: expiryDate || null,
-      })
+      }
+      if (!isOnline()) {
+        await enqueue({ type: 'stock_adjust', payload })
+        addToast('Stock change saved offline — will sync when online')
+        setShowAdjust(false)
+        setAdjustQty('')
+        setAdjustNote('')
+        setLotNumber('')
+        setExpiryDate('')
+        return
+      }
+      const { error } = await supabase.rpc('adjust_stock', payload)
       if (error) throw error
       addToast('Stock updated')
       setShowAdjust(false)
@@ -140,7 +152,7 @@ export default function InventoryPage() {
 
   if (selected) {
     const qty = Number(selected.inventory_balances?.[0]?.quantity || 0)
-    const low = qty <= Number(selected.reorder_level || 0)
+    const low = Number(selected.reorder_level || 0) > 0 && qty <= Number(selected.reorder_level)
     return (
       <div className="p-4 md:p-8 max-w-2xl mx-auto">
         <button onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm text-[#707070] mb-4 hover:text-[#181818]">
@@ -264,7 +276,7 @@ export default function InventoryPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => {
             const qty = Number(item.inventory_balances?.[0]?.quantity || 0)
-            const low = qty <= Number(item.reorder_level || 0)
+            const low = Number(item.reorder_level || 0) > 0 && qty <= Number(item.reorder_level)
             return (
               <button key={item.id} onClick={() => openDetail(item)} className="text-left">
                 <Card className="!p-4 hover:border-[#C8C8C5] transition-colors h-full">

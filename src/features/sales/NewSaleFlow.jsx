@@ -10,6 +10,7 @@ import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
 import { FlowShell, FlowContinue } from '../../components/layout/FlowShell'
 import { cn } from '../../utils/cn'
+import { isOnline, enqueue, cacheSet, cacheGet } from '../../lib/offline'
 
 export default function NewSaleFlow() {
   const navigate = useNavigate()
@@ -38,13 +39,20 @@ export default function NewSaleFlow() {
   useEffect(() => {
     async function load() {
       await loadCustomers()
-      const { data: p } = await supabase
-        .from('products')
-        .select('id, name, selling_price, unit, inventory_balances(quantity)')
-        .eq('type', 'finished_good')
-        .eq('is_active', true)
-        .order('name')
-      setProducts(p || [])
+      try {
+        const { data: p } = await supabase
+          .from('products')
+          .select('id, name, selling_price, unit, inventory_balances(quantity)')
+          .eq('type', 'finished_good')
+          .eq('is_active', true)
+          .order('name')
+        const list = p || []
+        setProducts(list)
+        await cacheSet('products_fg', list)
+      } catch {
+        const cached = await cacheGet('products_fg')
+        if (cached) setProducts(cached)
+      }
     }
     load()
   }, [])
@@ -110,16 +118,43 @@ export default function NewSaleFlow() {
         quantity: i.qty,
         unit_price: Number(i.selling_price),
       }))
-      const { data, error: err } = await supabase.rpc('record_sale', {
+      const payload = {
         p_customer_id: customerType === 'existing' ? selectedCustomer : null,
         p_items: items,
         p_payment_method: paymentMethod,
         p_paid_amount: paymentMethod === 'credit' ? 0 : total,
-      })
+      }
+      if (!isOnline()) {
+        await enqueue({ type: 'sale', payload })
+        setSuccess({ total, invoice_number: 'OFFLINE-PENDING', gross_profit: null, offline: true })
+        addToast('Sale saved offline — will sync when online')
+        return
+      }
+      const { data, error: err } = await supabase.rpc('record_sale', payload)
       if (err) throw err
       setSuccess(data)
       addToast('Sale completed')
     } catch (e) {
+      // network failure mid-request → queue
+      if (!isOnline() || e.message?.includes('Failed to fetch') || e.message?.includes('Network')) {
+        try {
+          const items = cartItems.map((i) => ({
+            product_id: i.id, quantity: i.qty, unit_price: Number(i.selling_price),
+          }))
+          await enqueue({
+            type: 'sale',
+            payload: {
+              p_customer_id: customerType === 'existing' ? selectedCustomer : null,
+              p_items: items,
+              p_payment_method: paymentMethod,
+              p_paid_amount: paymentMethod === 'credit' ? 0 : total,
+            },
+          })
+          setSuccess({ total, invoice_number: 'OFFLINE-PENDING', offline: true })
+          addToast('Sale saved offline — will sync when online')
+          return
+        } catch (_) {}
+      }
       setError(e.message || 'Failed to save sale')
     } finally {
       setSaving(false)
@@ -206,7 +241,7 @@ export default function NewSaleFlow() {
             <h2 className="text-lg font-medium mb-1">What are they buying?</h2>
             <p className="text-sm text-[#707070] mb-4">Use − / number / + to set quantity (e.g. 5 jars).</p>
             {products.length === 0 && (
-              <p className="text-sm text-[#B7833F]">No finished products yet. Add them in Settings first.</p>
+              <p className="text-sm text-[#B7833F]">No finished products yet. Add them in Settings and set opening stock (or produce first).</p>
             )}
             {products.map((p) => {
               const qty = cart[p.id] || 0
@@ -216,7 +251,7 @@ export default function NewSaleFlow() {
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 pr-3">
                       <div className="font-medium">{p.name}</div>
-                      <div className="text-sm text-[#707070] tabular-nums">{formatMoney(p.selling_price)} · {stock} in stock</div>
+                      <div className="text-sm text-[#707070] tabular-nums">{formatMoney(p.selling_price)} · {stock > 0 ? `${stock} in stock` : '0 in stock — adjust or produce'}</div>
                     </div>
                     {qty === 0 ? (
                       <button type="button" onClick={() => addToCart(p.id)} disabled={stock <= 0}
