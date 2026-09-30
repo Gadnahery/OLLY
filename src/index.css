@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #F7F7F5;
+  --color-surface: #FFFFFF;
+  --color-text: #181818;
+  --color-text-secondary: #707070;
+  --color-border: #E8E8E5;
+  --color-primary: #181818;
+  --color-success: #3F8065;
+  --color-warning: #B7833F;
+  --color-danger: #B4534A;
+  --color-accent: #3F8065;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+.tabular-nums { font-variant-numeric: tabular-nums; }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #E8E8E5 25%, #F0F0ED 50%, #E8E8E5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+.flow-enter { animation: flowIn 250ms ease-out; }
+@keyframes flowIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
