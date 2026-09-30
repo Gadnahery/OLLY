@@ -1,41 +1,56 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Minus, Plus, Check } from 'lucide-react'
+import { ArrowLeft, Minus, Plus, Check, UserPlus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { formatMoney } from '../../utils/format'
 import { Button } from '../../components/ui/Button'
 import { SelectionCard } from '../../components/ui/SelectionCard'
+import { Input } from '../../components/ui/Input'
+import { Modal } from '../../components/ui/Modal'
+import { useToast } from '../../components/ui/Toast'
 import { cn } from '../../utils/cn'
-
-const STEPS = ['customer', 'products', 'payment', 'review']
 
 export default function NewSaleFlow() {
   const navigate = useNavigate()
+  const { addToast } = useToast()
   const [step, setStep] = useState(0)
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
-  const [customerType, setCustomerType] = useState(null) // 'walkin' | 'existing'
+  const [customerType, setCustomerType] = useState(null)
   const [selectedCustomer, setSelectedCustomer] = useState(null)
-  const [cart, setCart] = useState({}) // productId -> qty
+  const [cart, setCart] = useState({})
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(null)
   const [error, setError] = useState(null)
+  const [showNewCustomer, setShowNewCustomer] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newPhone, setNewPhone] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [search, setSearch] = useState('')
+
+  async function loadCustomers() {
+    const { data: c } = await supabase.from('customers').select('id, name, phone').eq('is_active', true).order('name')
+    setCustomers(c || [])
+  }
 
   useEffect(() => {
     async function load() {
-      const { data: c } = await supabase.from('customers').select('id, name, phone').eq('is_active', true).order('name')
+      await loadCustomers()
       const { data: p } = await supabase
         .from('products')
         .select('id, name, selling_price, unit, inventory_balances(quantity)')
         .eq('type', 'finished_good')
         .eq('is_active', true)
         .order('name')
-      setCustomers(c || [])
       setProducts(p || [])
     }
     load()
   }, [])
+
+  const filteredCustomers = customers.filter(
+    (c) => !search || c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone || '').includes(search)
+  )
 
   const cartItems = Object.entries(cart)
     .filter(([, qty]) => qty > 0)
@@ -57,6 +72,30 @@ export default function NewSaleFlow() {
     })
   }
 
+  async function createCustomer() {
+    if (!newName.trim()) return
+    setCreating(true)
+    try {
+      const { data, error: err } = await supabase
+        .from('customers')
+        .insert({ name: newName.trim(), phone: newPhone.trim() || null })
+        .select()
+        .single()
+      if (err) throw err
+      await loadCustomers()
+      setCustomerType('existing')
+      setSelectedCustomer(data.id)
+      setShowNewCustomer(false)
+      setNewName('')
+      setNewPhone('')
+      addToast(`Customer ${data.name} added`)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setCreating(false)
+    }
+  }
+
   async function saveSale() {
     setSaving(true)
     setError(null)
@@ -74,6 +113,7 @@ export default function NewSaleFlow() {
       })
       if (err) throw err
       setSuccess(data)
+      addToast('Sale completed')
     } catch (e) {
       setError(e.message || 'Failed to save sale')
     } finally {
@@ -83,7 +123,7 @@ export default function NewSaleFlow() {
 
   if (success) {
     return (
-      <div className="min-h-full flex flex-col items-center justify-center p-6 flow-enter">
+      <div className="min-h-full flex flex-col items-center justify-center p-6 scale-enter">
         <div className="w-16 h-16 rounded-full bg-[#3F8065]/10 flex items-center justify-center mb-4">
           <Check className="w-8 h-8 text-[#3F8065]" />
         </div>
@@ -104,49 +144,48 @@ export default function NewSaleFlow() {
 
   return (
     <div className="min-h-full flex flex-col max-w-lg mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-4 border-b border-[#E8E8E5] bg-white sticky top-0 z-10">
         <button onClick={() => (step === 0 ? navigate(-1) : setStep((s) => s - 1))} className="p-2 -ml-2 rounded-lg hover:bg-[#F7F7F5]">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1">
           <h1 className="font-semibold">New sale</h1>
-          <p className="text-xs text-[#707070]">Step {step + 1} of {STEPS.length}</p>
+          <p className="text-xs text-[#707070]">Step {step + 1} of 4</p>
         </div>
       </div>
 
-      <div className="flex-1 p-4 flow-enter">
-        {/* Step: Customer */}
+      <div className="flex-1 p-4 flow-enter" key={step}>
         {step === 0 && (
           <div className="space-y-3">
             <h2 className="text-lg font-medium mb-4">Who is buying?</h2>
-            <SelectionCard
-              title="Walk-in customer"
-              selected={customerType === 'walkin'}
-              onClick={() => { setCustomerType('walkin'); setSelectedCustomer(null) }}
-            />
-            <SelectionCard
-              title="Existing customer"
-              selected={customerType === 'existing'}
-              onClick={() => setCustomerType('existing')}
-            />
+            <SelectionCard title="Walk-in customer" selected={customerType === 'walkin'}
+              onClick={() => { setCustomerType('walkin'); setSelectedCustomer(null) }} />
+            <SelectionCard title="Existing customer" selected={customerType === 'existing'}
+              onClick={() => setCustomerType('existing')} />
             {customerType === 'existing' && (
               <div className="mt-4 space-y-2">
-                {customers.map((c) => (
-                  <SelectionCard
-                    key={c.id}
-                    title={c.name}
-                    subtitle={c.phone}
-                    selected={selectedCustomer === c.id}
-                    onClick={() => setSelectedCustomer(c.id)}
-                  />
+                <input
+                  className="w-full h-11 px-4 rounded-xl border border-[#E8E8E5] text-sm"
+                  placeholder="Search customer..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewCustomer(true)}
+                  className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-[#E8E8E5] text-sm font-medium hover:bg-[#F7F7F5]"
+                >
+                  <UserPlus className="w-4 h-4" /> Add new customer
+                </button>
+                {filteredCustomers.map((c) => (
+                  <SelectionCard key={c.id} title={c.name} subtitle={c.phone}
+                    selected={selectedCustomer === c.id} onClick={() => setSelectedCustomer(c.id)} />
                 ))}
               </div>
             )}
           </div>
         )}
 
-        {/* Step: Products */}
         {step === 1 && (
           <div className="space-y-3 pb-24">
             <h2 className="text-lg font-medium mb-4">What are they buying?</h2>
@@ -154,22 +193,15 @@ export default function NewSaleFlow() {
               const qty = cart[p.id] || 0
               const stock = Number(p.inventory_balances?.[0]?.quantity || 0)
               return (
-                <div
-                  key={p.id}
-                  className={cn(
-                    'flex items-center justify-between p-4 rounded-2xl border-2 bg-white',
-                    qty > 0 ? 'border-[#181818]' : 'border-[#E8E8E5]'
-                  )}
-                >
+                <div key={p.id} className={cn('flex items-center justify-between p-4 rounded-2xl border-2 bg-white',
+                  qty > 0 ? 'border-[#181818]' : 'border-[#E8E8E5]')}>
                   <div>
                     <div className="font-medium">{p.name}</div>
                     <div className="text-sm text-[#707070] tabular-nums">{formatMoney(p.selling_price)} · {stock} in stock</div>
                   </div>
                   {qty === 0 ? (
-                    <button
-                      onClick={() => addToCart(p.id)}
-                      className="w-10 h-10 rounded-xl bg-[#181818] text-white flex items-center justify-center"
-                    >
+                    <button onClick={() => addToCart(p.id)} disabled={stock <= 0}
+                      className="w-10 h-10 rounded-xl bg-[#181818] text-white flex items-center justify-center disabled:opacity-40">
                       <Plus className="w-5 h-5" />
                     </button>
                   ) : (
@@ -178,7 +210,8 @@ export default function NewSaleFlow() {
                         <Minus className="w-4 h-4" />
                       </button>
                       <span className="w-8 text-center font-medium tabular-nums">{qty}</span>
-                      <button onClick={() => setQty(p.id, qty + 1)} className="w-9 h-9 rounded-lg border border-[#E8E8E5] flex items-center justify-center" disabled={qty >= stock}>
+                      <button onClick={() => setQty(p.id, qty + 1)} disabled={qty >= stock}
+                        className="w-9 h-9 rounded-lg border border-[#E8E8E5] flex items-center justify-center disabled:opacity-40">
                         <Plus className="w-4 h-4" />
                       </button>
                     </div>
@@ -189,22 +222,17 @@ export default function NewSaleFlow() {
           </div>
         )}
 
-        {/* Step: Payment */}
         {step === 2 && (
           <div className="space-y-3">
             <h2 className="text-lg font-medium mb-4">How are they paying?</h2>
             {['cash', 'mobile_money', 'bank', 'credit'].map((m) => (
-              <SelectionCard
-                key={m}
+              <SelectionCard key={m}
                 title={m === 'mobile_money' ? 'Mobile Money' : m.charAt(0).toUpperCase() + m.slice(1)}
-                selected={paymentMethod === m}
-                onClick={() => setPaymentMethod(m)}
-              />
+                selected={paymentMethod === m} onClick={() => setPaymentMethod(m)} />
             ))}
           </div>
         )}
 
-        {/* Step: Review */}
         {step === 3 && (
           <div className="space-y-4">
             <h2 className="text-lg font-medium mb-2">Sale summary</h2>
@@ -229,13 +257,14 @@ export default function NewSaleFlow() {
               </div>
             </div>
             {error && (
-              <div className="p-3 rounded-xl bg-[#B4534A]/10 text-[#B4534A] text-sm">{error}</div>
+              <div className="p-3 rounded-xl bg-[#B4534A]/10 text-[#B4534A] text-sm">
+                {error.includes('Insufficient') ? error : error}
+              </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Sticky bottom */}
       <div className="sticky bottom-0 p-4 bg-white border-t border-[#E8E8E5]">
         {step === 1 && cartItems.length > 0 && (
           <p className="text-sm text-[#707070] mb-2 tabular-nums">
@@ -243,23 +272,25 @@ export default function NewSaleFlow() {
           </p>
         )}
         {step < 3 ? (
-          <Button
-            className="w-full"
-            size="lg"
-            disabled={
-              (step === 0 && (!customerType || (customerType === 'existing' && !selectedCustomer))) ||
-              (step === 1 && cartItems.length === 0)
-            }
-            onClick={() => setStep((s) => s + 1)}
-          >
+          <Button className="w-full" size="lg"
+            disabled={(step === 0 && (!customerType || (customerType === 'existing' && !selectedCustomer))) || (step === 1 && cartItems.length === 0)}
+            onClick={() => setStep((s) => s + 1)}>
             Continue
           </Button>
         ) : (
-          <Button className="w-full" size="lg" loading={saving} onClick={saveSale}>
-            Save sale
-          </Button>
+          <Button className="w-full" size="lg" loading={saving} onClick={saveSale}>Save sale</Button>
         )}
       </div>
+
+      <Modal open={showNewCustomer} onClose={() => setShowNewCustomer(false)} title="New customer">
+        <div className="space-y-3">
+          <Input label="Name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Customer name" />
+          <Input label="Phone (optional)" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="+255..." />
+          <Button className="w-full" loading={creating} disabled={!newName.trim()} onClick={createCustomer}>
+            Add & select
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

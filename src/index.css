@@ -23,6 +23,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 .tabular-nums { font-variant-numeric: tabular-nums; }
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -33,8 +34,35 @@ body {
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
 }
-.flow-enter { animation: flowIn 250ms ease-out; }
+
+/* Guided flow transitions — 200–300ms, communicate forward motion */
 @keyframes flowIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.flow-enter { animation: flowIn 250ms ease-out; }
+.fade-enter { animation: fadeIn 200ms ease-out; }
+.scale-enter { animation: scaleIn 220ms ease-out; }
+
+/* Safe area for mobile bottom nav */
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0); }
+
+/* Smooth page content */
+main { scroll-behavior: smooth; }

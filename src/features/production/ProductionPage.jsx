@@ -33,7 +33,7 @@ export default function ProductionPage() {
 
   if (selected) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto">
+      <div className="p-4 md:p-8 max-w-2xl md:max-w-4xl mx-auto">
         <button onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm text-[#707070] mb-4 hover:text-[#181818]">
           <ArrowLeft className="w-4 h-4" /> Production
         </button>
@@ -64,34 +64,41 @@ export default function ProductionPage() {
           </Card>
         </div>
 
-        <Card className="mb-6">
-          <h3 className="font-semibold mb-3">Cost breakdown</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-[#707070]">Materials</span><span className="tabular-nums">{formatMoney(selected.material_cost || 0)}</span></div>
-            <div className="flex justify-between"><span className="text-[#707070]">Packaging</span><span className="tabular-nums">{formatMoney(selected.packaging_cost || 0)}</span></div>
-            <div className="flex justify-between"><span className="text-[#707070]">Labor</span><span className="tabular-nums">{formatMoney(selected.labor_cost || 0)}</span></div>
-            <div className="flex justify-between"><span className="text-[#707070]">Overhead</span><span className="tabular-nums">{formatMoney(selected.overhead_cost || 0)}</span></div>
-            <div className="flex justify-between border-t border-[#E8E8E5] pt-2 font-semibold">
-              <span>Total</span><span className="tabular-nums">{formatMoney(selected.total_cost || 0)}</span>
-            </div>
-          </div>
-        </Card>
-
-        {consumptions.length > 0 && (
+        {/* Desktop: 2-column workspace; Mobile: stacked */}
+        <div className="grid md:grid-cols-2 gap-4">
           <Card>
             <h3 className="font-semibold mb-3">Materials consumed</h3>
-            <div className="space-y-2 text-sm">
-              {consumptions.map((c, i) => (
-                <div key={i} className="flex justify-between">
-                  <span>{c.products?.name}</span>
-                  <span className="tabular-nums text-[#707070]">
-                    {formatNumber(c.quantity, 2)} {c.products?.unit}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {consumptions.length === 0 ? (
+              <p className="text-sm text-[#707070]">No consumption data</p>
+            ) : (
+              <div className="space-y-2 text-sm">
+                {consumptions.map((c, i) => (
+                  <div key={i} className="flex justify-between">
+                    <span>{c.products?.name}</span>
+                    <span className="tabular-nums text-[#707070]">
+                      {formatNumber(c.quantity, 2)} {c.products?.unit}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
-        )}
+          <Card>
+            <h3 className="font-semibold mb-3">Cost breakdown</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-[#707070]">Materials</span><span className="tabular-nums">{formatMoney(selected.material_cost || 0)}</span></div>
+              <div className="flex justify-between"><span className="text-[#707070]">Packaging</span><span className="tabular-nums">{formatMoney(selected.packaging_cost || 0)}</span></div>
+              <div className="flex justify-between"><span className="text-[#707070]">Labor</span><span className="tabular-nums">{formatMoney(selected.labor_cost || 0)}</span></div>
+              <div className="flex justify-between"><span className="text-[#707070]">Overhead</span><span className="tabular-nums">{formatMoney(selected.overhead_cost || 0)}</span></div>
+              <div className="flex justify-between border-t border-[#E8E8E5] pt-2 font-semibold">
+                <span>Total</span><span className="tabular-nums">{formatMoney(selected.total_cost || 0)}</span>
+              </div>
+            </div>
+            {selected.waste_reason && (
+              <p className="text-xs text-[#707070] mt-4">Waste reason: {selected.waste_reason}</p>
+            )}
+          </Card>
+        </div>
       </div>
     )
   }
