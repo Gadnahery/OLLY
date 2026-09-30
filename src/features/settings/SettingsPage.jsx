@@ -8,9 +8,13 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
 import { cn } from '../../utils/cn'
+import { useAuth } from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 export default function SettingsPage() {
   const { addToast } = useToast()
+  const { signOut, user } = useAuth()
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [recipes, setRecipes] = useState([])
   const [allMaterials, setAllMaterials] = useState([])
@@ -157,12 +161,17 @@ export default function SettingsPage() {
       </div>
 
       {tab === 'business' && (
-        <Card>
-          <h3 className="font-semibold mb-2">OLLY</h3>
-          <p className="text-sm text-[#707070]">Food-processing ERP · Connected to Supabase</p>
-          <p className="text-sm text-[#707070] mt-4">Currency: TZS</p>
-          <p className="text-sm text-[#707070]">Business: Peanut butter & tahini production</p>
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <h3 className="font-semibold mb-2">OLLY</h3>
+            <p className="text-sm text-[#707070]">Food-processing business system</p>
+            <p className="text-sm text-[#707070] mt-4">Currency: TZS</p>
+            {user && <p className="text-sm text-[#707070] mt-1">Signed in as {user.email}</p>}
+          </Card>
+          <Button variant="secondary" className="w-full" onClick={async () => { await signOut(); navigate('/login') }}>
+            Sign out
+          </Button>
+        </div>
       )}
 
       {tab === 'recipes' && (

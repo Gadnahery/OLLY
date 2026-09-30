@@ -121,8 +121,8 @@ export default function DashboardPage() {
         <KPICard label="COGS" value={formatMoney(metrics.cogs)} />
       </div>
 
-      {/* Revenue & Profit chart */}
-      <Card>
+      {/* Revenue & Profit chart — desktop only */}
+      <Card className="hidden md:block">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold">Revenue & Profit</h2>
           <div className="flex gap-1">
