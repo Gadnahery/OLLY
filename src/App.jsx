@@ -12,6 +12,7 @@ import CustomersPage from './features/customers/CustomersPage'
 import SuppliersPage from './features/suppliers/SuppliersPage'
 import FinancePage from './features/finance/FinancePage'
 import ExpenseFlow from './features/finance/ExpenseFlow'
+import PaymentFlow from './features/finance/PaymentFlow'
 import PayrollPage from './features/payroll/PayrollPage'
 import ReportsPage from './features/reports/ReportsPage'
 import SettingsPage from './features/settings/SettingsPage'
@@ -34,7 +35,7 @@ export default function App() {
           <Route path="/suppliers" element={<SuppliersPage />} />
           <Route path="/finance" element={<FinancePage />} />
           <Route path="/finance/expense" element={<ExpenseFlow />} />
-          <Route path="/finance/payment" element={<FinancePage />} />
+          <Route path="/finance/payment" element={<PaymentFlow />} />
           <Route path="/payroll" element={<PayrollPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />

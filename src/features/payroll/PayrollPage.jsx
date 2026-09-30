@@ -11,11 +11,38 @@ export default function PayrollPage() {
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(null)
   const [message, setMessage] = useState(null)
+  const [showAdd, setShowAdd] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newRole, setNewRole] = useState('')
+  const [newSalary, setNewSalary] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    supabase.from('employees').select('*').eq('is_active', true).order('name')
-      .then(({ data }) => { setEmployees(data || []); setLoading(false) })
-  }, [])
+  async function load() {
+    const { data } = await supabase.from('employees').select('*').eq('is_active', true).order('name')
+    setEmployees(data || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function addEmployee() {
+    if (!newName.trim() || !newSalary) return
+    setSaving(true)
+    try {
+      await supabase.from('employees').insert({
+        name: newName.trim(),
+        role: newRole.trim() || null,
+        salary: Number(newSalary),
+      })
+      setShowAdd(false)
+      setNewName(''); setNewRole(''); setNewSalary('')
+      await load()
+    } catch (e) {
+      setMessage(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   async function payEmployee(emp) {
     setPaying(emp.id)
@@ -60,10 +87,25 @@ export default function PayrollPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Payroll</h1>
-        <p className="text-sm text-[#707070] mt-0.5">Employees and salary payments</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Payroll</h1>
+          <p className="text-sm text-[#707070] mt-0.5">Employees and salary payments</p>
+        </div>
+        <Button onClick={() => setShowAdd(true)}>Add employee</Button>
       </div>
+
+      {showAdd && (
+        <Card className="mb-6 space-y-3">
+          <input className="w-full h-11 px-4 rounded-xl border border-[#E8E8E5]" placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+          <input className="w-full h-11 px-4 rounded-xl border border-[#E8E8E5]" placeholder="Role" value={newRole} onChange={(e) => setNewRole(e.target.value)} />
+          <input type="number" className="w-full h-11 px-4 rounded-xl border border-[#E8E8E5] tabular-nums" placeholder="Monthly salary TZS" value={newSalary} onChange={(e) => setNewSalary(e.target.value)} />
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setShowAdd(false)}>Cancel</Button>
+            <Button loading={saving} onClick={addEmployee} disabled={!newName.trim() || !newSalary}>Save</Button>
+          </div>
+        </Card>
+      )}
 
       <Card className="mb-6">
         <p className="text-sm text-[#707070]">Monthly payroll total</p>
