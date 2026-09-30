@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { formatMoney, formatNumber } from '../../utils/format'
 import { Card } from '../../components/ui/Card'
@@ -7,39 +8,68 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
-import { cn } from '../../utils/cn'
 import { useAuth } from '../../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { cn } from '../../utils/cn'
 
 export default function SettingsPage() {
   const { addToast } = useToast()
   const { signOut, user } = useAuth()
+  const { lang, setLang, t } = useLanguage()
   const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [recipes, setRecipes] = useState([])
   const [allMaterials, setAllMaterials] = useState([])
-  const [tab, setTab] = useState('products')
+  const [tab, setTab] = useState('profile')
   const [loading, setLoading] = useState(true)
   const [editRecipe, setEditRecipe] = useState(null)
   const [recipeItems, setRecipeItems] = useState([])
   const [saving, setSaving] = useState(false)
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [newProduct, setNewProduct] = useState({ name: '', type: 'finished_good', unit: 'pcs', selling_price: '', cost_price: '', reorder_level: '' })
+  const [profile, setProfile] = useState({ full_name: '', business_name: 'OLLY', phone: '' })
+  const [editProduct, setEditProduct] = useState(null)
 
   async function load() {
     setLoading(true)
     const [{ data: p }, { data: r }, { data: mats }] = await Promise.all([
-      supabase.from('products').select('id, name, type, unit, selling_price, cost_price, reorder_level, is_active').order('type').order('name'),
+      supabase.from('products').select('id, name, type, unit, selling_price, cost_price, reorder_level, is_active').eq('is_active', true).order('type').order('name'),
       supabase.from('recipes').select('id, product_id, name, yield_quantity, recipe_items(id, product_id, quantity, products(name, unit))'),
       supabase.from('products').select('id, name, unit, type').in('type', ['raw_material', 'packaging']).eq('is_active', true).order('name'),
     ])
     setProducts(p || [])
     setRecipes(r || [])
     setAllMaterials(mats || [])
+    if (user) {
+      const { data: prof } = await supabase.from('user_profiles').select('*').eq('user_id', user.id).maybeSingle()
+      if (prof) setProfile({ full_name: prof.full_name || '', business_name: prof.business_name || 'OLLY', phone: prof.phone || '' })
+      else if (user.user_metadata?.full_name) setProfile((pr) => ({ ...pr, full_name: user.user_metadata.full_name }))
+    }
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [user])
+
+  async function saveProfile() {
+    if (!user) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('user_profiles').upsert({
+        user_id: user.id,
+        full_name: profile.full_name,
+        business_name: profile.business_name,
+        phone: profile.phone,
+        language: lang,
+        updated_at: new Date().toISOString(),
+      })
+      if (error) throw error
+      addToast(lang === 'sw' ? 'Wasifu umehifadhiwa' : 'Profile saved')
+    } catch (e) {
+      addToast(e.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   function openRecipe(recipe) {
     setEditRecipe(recipe)
@@ -55,11 +85,8 @@ export default function SettingsPage() {
 
   function openNewRecipe(product) {
     const existing = recipes.find((r) => r.product_id === product.id)
-    if (existing) {
-      openRecipe(existing)
-      return
-    }
-    setEditRecipe({ id: null, product_id: product.id, name: `${product.name} Recipe`, yield_quantity: 1, productName: product.name })
+    if (existing) { openRecipe(existing); return }
+    setEditRecipe({ id: null, product_id: product.id, name: `${product.name} Recipe`, yield_quantity: 1 })
     setRecipeItems([])
   }
 
@@ -69,11 +96,7 @@ export default function SettingsPage() {
     try {
       let recipeId = editRecipe.id
       if (!recipeId) {
-        const { data, error } = await supabase
-          .from('recipes')
-          .insert({ product_id: editRecipe.product_id, name: editRecipe.name, yield_quantity: 1 })
-          .select()
-          .single()
+        const { data, error } = await supabase.from('recipes').insert({ product_id: editRecipe.product_id, name: editRecipe.name, yield_quantity: 1 }).select().single()
         if (error) throw error
         recipeId = data.id
       } else {
@@ -82,14 +105,12 @@ export default function SettingsPage() {
       if (recipeItems.length > 0) {
         const { error } = await supabase.from('recipe_items').insert(
           recipeItems.filter((i) => i.product_id && i.quantity > 0).map((i) => ({
-            recipe_id: recipeId,
-            product_id: i.product_id,
-            quantity: i.quantity,
+            recipe_id: recipeId, product_id: i.product_id, quantity: i.quantity,
           }))
         )
         if (error) throw error
       }
-      addToast('Recipe saved')
+      addToast(lang === 'sw' ? 'Mapishi yamehifadhiwa' : 'Recipe saved')
       setEditRecipe(null)
       await load()
     } catch (e) {
@@ -112,8 +133,7 @@ export default function SettingsPage() {
         reorder_level: Number(newProduct.reorder_level) || 0,
       })
       if (error) throw error
-      // opening balance 0 via no movement
-      addToast('Product added')
+      addToast(lang === 'sw' ? 'Bidhaa imeongezwa' : 'Product added')
       setShowAddProduct(false)
       setNewProduct({ name: '', type: 'finished_good', unit: 'pcs', selling_price: '', cost_price: '', reorder_level: '' })
       await load()
@@ -124,10 +144,45 @@ export default function SettingsPage() {
     }
   }
 
+  async function saveEditProduct() {
+    if (!editProduct) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('products').update({
+        name: editProduct.name,
+        cost_price: Number(editProduct.cost_price) || 0,
+        selling_price: Number(editProduct.selling_price) || 0,
+        reorder_level: Number(editProduct.reorder_level) || 0,
+        unit: editProduct.unit,
+      }).eq('id', editProduct.id)
+      if (error) throw error
+      addToast(lang === 'sw' ? 'Bidhaa imesasishwa' : 'Product updated')
+      setEditProduct(null)
+      await load()
+    } catch (e) {
+      addToast(e.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm(lang === 'sw' ? 'Futa bidhaa hii?' : 'Delete this product?')) return
+    try {
+      const { error } = await supabase.rpc('soft_delete_product', { p_product_id: id })
+      if (error) throw error
+      addToast(lang === 'sw' ? 'Bidhaa imefutwa' : 'Product deleted')
+      await load()
+    } catch (e) {
+      addToast(e.message, 'error')
+    }
+  }
+
   const tabs = [
-    { id: 'products', label: 'Products' },
-    { id: 'recipes', label: 'Recipes' },
-    { id: 'business', label: 'Business' },
+    { id: 'profile', label: t('profile') },
+    { id: 'products', label: t('products') },
+    { id: 'recipes', label: t('recipes') },
+    { id: 'business', label: t('business') },
   ]
 
   const byType = {
@@ -135,51 +190,87 @@ export default function SettingsPage() {
     packaging: products.filter((p) => p.type === 'packaging'),
     finished_good: products.filter((p) => p.type === 'finished_good'),
   }
-
   const finishedGoods = products.filter((p) => p.type === 'finished_good')
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-sm text-[#707070] mt-0.5">Products, recipes and business config</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('settings')}</h1>
+          <p className="text-sm text-[#707070] mt-0.5">Profile, language, products & recipes</p>
         </div>
         {tab === 'products' && (
           <Button onClick={() => setShowAddProduct(true)}><Plus className="w-4 h-4" /> Add product</Button>
         )}
       </div>
 
-      <div className="flex gap-2 mb-6">
-        {tabs.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={cn('px-4 py-2 rounded-full text-sm',
-              tab === t.id ? 'bg-[#181818] text-white' : 'bg-white border border-[#E8E8E5]')}>
-            {t.label}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+        {tabs.map((tb) => (
+          <button key={tb.id} onClick={() => setTab(tb.id)}
+            className={cn('px-4 py-2 rounded-full text-sm whitespace-nowrap',
+              tab === tb.id ? 'bg-[#181818] text-white' : 'bg-white border border-[#E8E8E5]')}>
+            {tb.label}
           </button>
         ))}
       </div>
 
-      {tab === 'business' && (
-        <div className="space-y-4">
+      {tab === 'profile' && (
+        <div className="space-y-4 max-w-md">
+          <Card className="space-y-3">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-16 h-16 rounded-full bg-[#181818] text-white flex items-center justify-center text-xl font-semibold">
+                {(profile.full_name || user?.email || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="font-medium">{profile.full_name || 'Your name'}</p>
+                <p className="text-sm text-[#707070]">{user?.email}</p>
+              </div>
+            </div>
+            <Input label={lang === 'sw' ? 'Jina' : 'Full name'} value={profile.full_name}
+              onChange={(e) => setProfile({ ...profile, full_name: e.target.value })} />
+            <Input label={lang === 'sw' ? 'Jina la biashara' : 'Business name'} value={profile.business_name}
+              onChange={(e) => setProfile({ ...profile, business_name: e.target.value })} />
+            <Input label={lang === 'sw' ? 'Simu' : 'Phone'} value={profile.phone}
+              onChange={(e) => setProfile({ ...profile, phone: e.target.value })} />
+            <Button loading={saving} onClick={saveProfile}>{t('save')}</Button>
+          </Card>
+
           <Card>
-            <h3 className="font-semibold mb-2">OLLY</h3>
+            <p className="font-medium mb-3">{t('language')} / Lugha</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setLang('en')}
+                className={cn('flex-1 py-3 rounded-xl border-2 text-sm font-medium',
+                  lang === 'en' ? 'border-[#181818] bg-[#181818] text-white' : 'border-[#E8E8E5]')}>
+                English
+              </button>
+              <button type="button" onClick={() => setLang('sw')}
+                className={cn('flex-1 py-3 rounded-xl border-2 text-sm font-medium',
+                  lang === 'sw' ? 'border-[#181818] bg-[#181818] text-white' : 'border-[#E8E8E5]')}>
+                Kiswahili
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {tab === 'business' && (
+        <div className="space-y-4 max-w-md">
+          <Card>
+            <h3 className="font-semibold mb-2">{profile.business_name || 'OLLY'}</h3>
             <p className="text-sm text-[#707070]">Food-processing business system</p>
             <p className="text-sm text-[#707070] mt-4">Currency: TZS</p>
-            {user && <p className="text-sm text-[#707070] mt-1">Signed in as {user.email}</p>}
+            {user && <p className="text-sm text-[#707070] mt-1">{user.email}</p>}
           </Card>
           <Button variant="secondary" className="w-full" onClick={async () => { await signOut(); navigate('/login') }}>
-            Sign out
+            {t('signOut')}
           </Button>
         </div>
       )}
 
       {tab === 'recipes' && (
-        loading ? (
-          <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-20" />)}</div>
-        ) : (
+        loading ? <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-20" />)}</div>
+        : (
           <div className="space-y-3">
-            <p className="text-sm text-[#707070] mb-2">Bill of materials per finished product. OLLY uses these for production.</p>
             {finishedGoods.map((p) => {
               const recipe = recipes.find((r) => r.product_id === p.id)
               return (
@@ -194,16 +285,13 @@ export default function SettingsPage() {
                               {ri.products?.name}: {formatNumber(ri.quantity, 3)} {ri.products?.unit}
                             </li>
                           ))}
-                          {(!recipe.recipe_items || recipe.recipe_items.length === 0) && (
-                            <li className="text-sm text-[#B7833F]">No ingredients yet</li>
-                          )}
                         </ul>
                       ) : (
                         <p className="text-sm text-[#B7833F] mt-1">No recipe</p>
                       )}
                     </div>
                     <Button size="sm" variant="secondary" onClick={() => openNewRecipe(p)}>
-                      <Pencil className="w-3.5 h-3.5" /> {recipe ? 'Edit' : 'Create'}
+                      <Pencil className="w-3.5 h-3.5" /> {recipe ? t('edit') : 'Create'}
                     </Button>
                   </div>
                 </Card>
@@ -214,9 +302,8 @@ export default function SettingsPage() {
       )}
 
       {tab === 'products' && (
-        loading ? (
-          <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-16" />)}</div>
-        ) : (
+        loading ? <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-16" />)}</div>
+        : (
           <div className="space-y-6">
             {[
               { key: 'finished_good', label: 'Finished goods' },
@@ -227,16 +314,21 @@ export default function SettingsPage() {
                 <h3 className="text-sm font-medium text-[#707070] mb-2 uppercase tracking-wider">{section.label}</h3>
                 <div className="space-y-2">
                   {byType[section.key].map((p) => (
-                    <Card key={p.id} className="!p-4 flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">{p.name}</p>
-                        <p className="text-xs text-[#707070] mt-0.5">Unit: {p.unit} · Reorder at {formatNumber(p.reorder_level)}</p>
+                    <Card key={p.id} className="!p-4 flex justify-between items-center gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{p.name}</p>
+                        <p className="text-xs text-[#707070] mt-0.5">
+                          {p.unit} · Cost {formatMoney(p.cost_price)}
+                          {p.type === 'finished_good' ? ` · Sell ${formatMoney(p.selling_price)}` : ''}
+                        </p>
                       </div>
-                      <div className="text-right text-sm">
-                        {p.type === 'finished_good' && (
-                          <p className="tabular-nums font-medium">{formatMoney(p.selling_price)}</p>
-                        )}
-                        <p className="text-xs text-[#707070] tabular-nums">Cost {formatMoney(p.cost_price)}</p>
+                      <div className="flex gap-1 shrink-0">
+                        <button type="button" className="p-2 rounded-lg hover:bg-[#F7F7F5]" onClick={() => setEditProduct({ ...p })}>
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button type="button" className="p-2 rounded-lg hover:bg-[#B4534A]/10 text-[#B4534A]" onClick={() => deleteProduct(p.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </Card>
                   ))}
@@ -247,7 +339,6 @@ export default function SettingsPage() {
         )
       )}
 
-      {/* Recipe editor modal */}
       <Modal open={!!editRecipe} onClose={() => setEditRecipe(null)} title={editRecipe?.name || 'Edit recipe'} size="lg">
         <div className="space-y-4">
           <p className="text-sm text-[#707070]">Ingredients per 1 unit of output</p>
@@ -255,16 +346,14 @@ export default function SettingsPage() {
             <div key={idx} className="flex gap-2 items-end">
               <div className="flex-1">
                 <label className="text-xs text-[#707070]">Material</label>
-                <select
-                  className="w-full h-11 px-3 rounded-xl border border-[#E8E8E5] text-sm"
+                <select className="w-full h-11 px-3 rounded-xl border border-[#E8E8E5] text-sm"
                   value={item.product_id || ''}
                   onChange={(e) => {
                     const mat = allMaterials.find((m) => m.id === e.target.value)
                     setRecipeItems((items) => items.map((it, i) =>
                       i === idx ? { ...it, product_id: e.target.value, name: mat?.name, unit: mat?.unit } : it
                     ))
-                  }}
-                >
+                  }}>
                   <option value="">Select...</option>
                   {allMaterials.map((m) => (
                     <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
@@ -286,7 +375,7 @@ export default function SettingsPage() {
           <Button variant="secondary" size="sm" onClick={() => setRecipeItems((items) => [...items, { product_id: '', quantity: 0 }])}>
             <Plus className="w-4 h-4" /> Add ingredient
           </Button>
-          <Button className="w-full" loading={saving} onClick={saveRecipe}>Save recipe</Button>
+          <Button className="w-full" loading={saving} onClick={saveRecipe}>{t('save')}</Button>
         </div>
       </Modal>
 
@@ -302,7 +391,7 @@ export default function SettingsPage() {
               <option value="packaging">Packaging</option>
             </select>
           </div>
-          <Input label="Unit" value={newProduct.unit} onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })} placeholder="pcs, kg, L" />
+          <Input label="Unit" value={newProduct.unit} onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })} />
           {newProduct.type === 'finished_good' && (
             <Input label="Selling price" type="number" value={newProduct.selling_price}
               onChange={(e) => setNewProduct({ ...newProduct, selling_price: e.target.value })} />
@@ -311,8 +400,26 @@ export default function SettingsPage() {
             onChange={(e) => setNewProduct({ ...newProduct, cost_price: e.target.value })} />
           <Input label="Reorder level" type="number" value={newProduct.reorder_level}
             onChange={(e) => setNewProduct({ ...newProduct, reorder_level: e.target.value })} />
-          <Button className="w-full" loading={saving} disabled={!newProduct.name.trim()} onClick={addProduct}>Save product</Button>
+          <Button className="w-full" loading={saving} disabled={!newProduct.name.trim()} onClick={addProduct}>{t('save')}</Button>
         </div>
+      </Modal>
+
+      <Modal open={!!editProduct} onClose={() => setEditProduct(null)} title={t('edit')}>
+        {editProduct && (
+          <div className="space-y-3">
+            <Input label="Name" value={editProduct.name} onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })} />
+            <Input label="Unit" value={editProduct.unit} onChange={(e) => setEditProduct({ ...editProduct, unit: e.target.value })} />
+            <Input label="Cost price" type="number" value={editProduct.cost_price}
+              onChange={(e) => setEditProduct({ ...editProduct, cost_price: e.target.value })} />
+            {editProduct.type === 'finished_good' && (
+              <Input label="Selling price" type="number" value={editProduct.selling_price}
+                onChange={(e) => setEditProduct({ ...editProduct, selling_price: e.target.value })} />
+            )}
+            <Input label="Reorder level" type="number" value={editProduct.reorder_level}
+              onChange={(e) => setEditProduct({ ...editProduct, reorder_level: e.target.value })} />
+            <Button className="w-full" loading={saving} onClick={saveEditProduct}>{t('save')}</Button>
+          </div>
+        )}
       </Modal>
     </div>
   )

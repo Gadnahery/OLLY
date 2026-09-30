@@ -188,32 +188,51 @@ export default function NewSaleFlow() {
 
         {step === 1 && (
           <div className="space-y-3 pb-24">
-            <h2 className="text-lg font-medium mb-4">What are they buying?</h2>
+            <h2 className="text-lg font-medium mb-1">What are they buying?</h2>
+            <p className="text-sm text-[#707070] mb-4">Tap + to add. Keep tapping or use − / + to set quantity (e.g. 5 jars).</p>
             {products.map((p) => {
               const qty = cart[p.id] || 0
               const stock = Number(p.inventory_balances?.[0]?.quantity || 0)
               return (
-                <div key={p.id} className={cn('flex items-center justify-between p-4 rounded-2xl border-2 bg-white',
+                <div key={p.id} className={cn('p-4 rounded-2xl border-2 bg-white',
                   qty > 0 ? 'border-[#181818]' : 'border-[#E8E8E5]')}>
-                  <div>
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-sm text-[#707070] tabular-nums">{formatMoney(p.selling_price)} · {stock} in stock</div>
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 pr-3">
+                      <div className="font-medium">{p.name}</div>
+                      <div className="text-sm text-[#707070] tabular-nums">{formatMoney(p.selling_price)} · {stock} in stock</div>
+                    </div>
+                    {qty === 0 ? (
+                      <button type="button" onClick={() => addToCart(p.id)} disabled={stock <= 0}
+                        className="w-11 h-11 rounded-xl bg-[#181818] text-white flex items-center justify-center disabled:opacity-40 shrink-0">
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button type="button" onClick={() => setQty(p.id, qty - 1)}
+                          className="w-10 h-10 rounded-xl border border-[#E8E8E5] flex items-center justify-center active:bg-[#F7F7F5]">
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <input
+                          type="number"
+                          min={1}
+                          max={stock}
+                          value={qty}
+                          onChange={(e) => {
+                            const v = Math.max(0, Math.min(stock, Number(e.target.value) || 0))
+                            setQty(p.id, v)
+                          }}
+                          className="w-14 h-10 text-center font-semibold tabular-nums rounded-xl border border-[#E8E8E5] text-base"
+                        />
+                        <button type="button" onClick={() => setQty(p.id, Math.min(stock, qty + 1))} disabled={qty >= stock}
+                          className="w-10 h-10 rounded-xl border border-[#E8E8E5] flex items-center justify-center disabled:opacity-40 active:bg-[#F7F7F5]">
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {qty === 0 ? (
-                    <button onClick={() => addToCart(p.id)} disabled={stock <= 0}
-                      className="w-10 h-10 rounded-xl bg-[#181818] text-white flex items-center justify-center disabled:opacity-40">
-                      <Plus className="w-5 h-5" />
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => setQty(p.id, qty - 1)} className="w-9 h-9 rounded-lg border border-[#E8E8E5] flex items-center justify-center">
-                        <Minus className="w-4 h-4" />
-                      </button>
-                      <span className="w-8 text-center font-medium tabular-nums">{qty}</span>
-                      <button onClick={() => setQty(p.id, qty + 1)} disabled={qty >= stock}
-                        className="w-9 h-9 rounded-lg border border-[#E8E8E5] flex items-center justify-center disabled:opacity-40">
-                        <Plus className="w-4 h-4" />
-                      </button>
+                  {qty > 0 && (
+                    <div className="mt-2 text-right text-sm font-medium tabular-nums text-[#181818]">
+                      {formatMoney(qty * Number(p.selling_price))}
                     </div>
                   )}
                 </div>

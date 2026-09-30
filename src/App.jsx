@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { LanguageProvider } from './i18n/LanguageContext'
 import { AppShell } from './components/layout/AppShell'
 import LoginPage from './features/auth/LoginPage'
 import DashboardPage from './features/dashboard/DashboardPage'
@@ -40,7 +41,9 @@ function AppRoutes() {
       <Route
         element={
           <ProtectedRoute>
-            <AppShell />
+            <LanguageProvider>
+              <AppShell />
+            </LanguageProvider>
           </ProtectedRoute>
         }
       >

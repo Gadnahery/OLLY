@@ -51,7 +51,7 @@ export function AppShell() {
           </header>
         )}
 
-        <main className={isNewFlow ? 'flex-1 overflow-y-auto' : 'flex-1 overflow-y-auto pb-20 md:pb-6'}>
+        <main className={isNewFlow ? 'flex-1 overflow-y-auto' : 'flex-1 overflow-y-auto pb-28 md:pb-6'}>
           <Outlet />
         </main>
       </div>

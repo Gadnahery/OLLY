@@ -6,8 +6,10 @@ import { supabase } from '../../lib/supabase'
 import { formatMoney } from '../../utils/format'
 import { KPICard, Card } from '../../components/ui/Card'
 import { cn } from '../../utils/cn'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 export default function DashboardPage() {
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [metrics, setMetrics] = useState({
     revenue: 0, cogs: 0, grossProfit: 0, netProfit: 0, toCollect: 0, toPay: 0,
@@ -92,7 +94,7 @@ export default function DashboardPage() {
   }, [chartPeriod])
 
   const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const greeting = hour < 12 ? t('greetingMorning') : hour < 17 ? t('greetingAfternoon') : t('greetingEvening')
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
   if (loading) {
@@ -111,7 +113,7 @@ export default function DashboardPage() {
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl md:text-[32px] font-semibold tracking-tight">{greeting}, Owner.</h1>
-        <p className="text-[#707070] mt-1">Here&apos;s what is happening in your business · {today}</p>
+        <p className="text-[#707070] mt-1">{t('dashboardSubtitle')} · {today}</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
