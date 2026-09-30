@@ -11,6 +11,7 @@ import InventoryPage from './features/inventory/InventoryPage'
 import CustomersPage from './features/customers/CustomersPage'
 import SuppliersPage from './features/suppliers/SuppliersPage'
 import FinancePage from './features/finance/FinancePage'
+import ExpenseFlow from './features/finance/ExpenseFlow'
 import PayrollPage from './features/payroll/PayrollPage'
 import ReportsPage from './features/reports/ReportsPage'
 import SettingsPage from './features/settings/SettingsPage'
@@ -32,7 +33,7 @@ export default function App() {
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/suppliers" element={<SuppliersPage />} />
           <Route path="/finance" element={<FinancePage />} />
-          <Route path="/finance/expense" element={<FinancePage />} />
+          <Route path="/finance/expense" element={<ExpenseFlow />} />
           <Route path="/finance/payment" element={<FinancePage />} />
           <Route path="/payroll" element={<PayrollPage />} />
           <Route path="/reports" element={<ReportsPage />} />
