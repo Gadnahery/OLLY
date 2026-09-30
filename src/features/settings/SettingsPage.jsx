@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useNavigate, Link } from 'react-router-dom'
-import { requestNotificationPermission } from '../../lib/push'
+import { requestNotificationPermission, subscribePush, showLocalNotification } from '../../lib/push'
 import { supabase } from '../../lib/supabase'
 import { formatMoney, formatNumber } from '../../utils/format'
 import { Card } from '../../components/ui/Card'
@@ -275,8 +275,13 @@ export default function SettingsPage() {
             {user && <p className="text-sm text-[#707070] mt-1">{user.email}</p>}
           </Card>
           <Button variant="secondary" className="w-full" onClick={async () => {
-            const r = await requestNotificationPermission()
-            addToast(r === 'granted' ? 'Notifications enabled' : `Notifications: ${r}`)
+            try {
+              await subscribePush(user?.id)
+              await showLocalNotification('Olly', 'Push notifications are on for this device')
+              addToast('Notifications enabled on this device')
+            } catch (e) {
+              addToast(e.message || 'Could not enable notifications', 'error')
+            }
           }}>
             Enable notifications
           </Button>

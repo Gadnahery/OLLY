@@ -46,7 +46,7 @@ export function AppShell() {
         {/* Mobile top bar */}
         {!isNewFlow && (
           <header className="md:hidden flex items-center justify-between h-14 px-4 border-b border-[#E8E8E5] bg-white">
-            <span className="text-lg font-semibold">OLLY</span>
+            <span className="text-lg font-semibold">Olly</span>
             <button className="p-2 text-[#707070]">
               <Bell className="w-5 h-5" />
             </button>

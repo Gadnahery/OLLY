@@ -44,7 +44,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#F7F7F5] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight">OLLY</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Olly</h1>
           <p className="text-sm text-[#707070] mt-2">Food-processing business system</p>
         </div>
         <form onSubmit={handleSubmit} className="bg-white border border-[#E8E8E5] rounded-2xl p-6 space-y-4">

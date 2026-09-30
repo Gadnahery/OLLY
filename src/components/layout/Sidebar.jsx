@@ -56,7 +56,7 @@ export function Sidebar({ collapsed, onToggle }) {
       )}
     >
       <div className={cn('flex items-center h-16 px-4 border-b border-[#E8E8E5]', collapsed ? 'justify-center' : 'justify-between')}>
-        {!collapsed && <span className="text-lg font-semibold tracking-tight">OLLY</span>}
+        {!collapsed && <span className="text-lg font-semibold tracking-tight">Olly</span>}
         <button type="button" onClick={onToggle} className="p-2 rounded-lg hover:bg-[#F7F7F5] text-[#707070]">
           <ChevronLeft className={cn('w-4 h-4 transition-transform', collapsed && 'rotate-180')} />
         </button>
