@@ -105,9 +105,6 @@ export default function NewSaleFlow() {
     setSaving(true)
     setError(null)
     try {
-      if (paymentMethod === 'credit' && customerType !== 'existing') {
-        throw new Error('Credit (mkopo) requires selecting a customer')
-      }
       const items = cartItems.map((i) => ({
         product_id: i.id,
         quantity: i.qty,
@@ -184,8 +181,8 @@ export default function NewSaleFlow() {
           <div className="space-y-3">
             <h2 className="text-lg font-medium mb-4">Who is buying?</h2>
             <SelectionCard title="Walk-in customer" selected={customerType === 'walkin'}
-              onClick={() => { setCustomerType('walkin'); setSelectedCustomer(null); if (paymentMethod === 'credit') setPaymentMethod('cash') }} />
-            <SelectionCard title="Existing customer" subtitle="Required for credit (mkopo)" selected={customerType === 'existing'}
+              onClick={() => { setCustomerType('walkin'); setSelectedCustomer(null) }} />
+            <SelectionCard title="Existing customer" selected={customerType === 'existing'}
               onClick={() => setCustomerType('existing')} />
             {customerType === 'existing' && (
               <div className="mt-4 space-y-2">
@@ -258,16 +255,9 @@ export default function NewSaleFlow() {
               <SelectionCard
                 key={m}
                 title={m === 'mobile_money' ? 'Mobile Money' : m === 'credit' ? 'Credit (mkopo)' : m.charAt(0).toUpperCase() + m.slice(1)}
-                subtitle={m === 'credit' ? 'Customer pays later — needs a named customer' : undefined}
+                subtitle={m === 'credit' ? 'Pay later (mkopo)' : undefined}
                 selected={paymentMethod === m}
-                onClick={() => {
-                  if (m === 'credit' && customerType !== 'existing') {
-                    setError('Select an existing customer for credit sales')
-                    return
-                  }
-                  setError(null)
-                  setPaymentMethod(m)
-                }}
+                onClick={() => { setError(null); setPaymentMethod(m) }}
               />
             ))}
             {error && <p className="text-sm text-[#B4534A]">{error}</p>}

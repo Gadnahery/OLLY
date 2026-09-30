@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
+import { requestNotificationPermission } from '../../lib/push'
 import { supabase } from '../../lib/supabase'
 import { formatMoney, formatNumber } from '../../utils/format'
 import { Card } from '../../components/ui/Card'
@@ -261,6 +262,12 @@ export default function SettingsPage() {
             <p className="text-sm text-[#707070] mt-4">Currency: TZS</p>
             {user && <p className="text-sm text-[#707070] mt-1">{user.email}</p>}
           </Card>
+          <Button variant="secondary" className="w-full" onClick={async () => {
+            const r = await requestNotificationPermission()
+            addToast(r === 'granted' ? 'Notifications enabled' : `Notifications: ${r}`)
+          }}>
+            Enable notifications
+          </Button>
           <Button variant="secondary" className="w-full" onClick={async () => { await signOut(); navigate('/login') }}>
             {t('signOut')}
           </Button>
