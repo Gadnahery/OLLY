@@ -12,6 +12,7 @@ import { FilterChips } from '../../components/ui/FilterChips'
 import { useToast } from '../../components/ui/Toast'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { SelectionCard } from '../../components/ui/SelectionCard'
+import { PeriodPicker, getPeriodRange } from '../../components/ui/PeriodPicker'
 
 export default function SalesPage() {
   const { t, lang } = useLanguage()
@@ -25,6 +26,9 @@ export default function SalesPage() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [filter, setFilter] = useState('all')
+  const [period, setPeriod] = useState('all')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
   const [customers, setCustomers] = useState([])
   const [editForm, setEditForm] = useState({ customer_id: null, payment_method: 'cash', paid_amount: 0, payment_status: 'paid' })
 
@@ -118,10 +122,12 @@ export default function SalesPage() {
     }
   }
 
+  const range = getPeriodRange(period, customFrom, customTo)
   const filtered = sales.filter((s) => {
-    if (filter === 'all') return true
-    if (filter === 'paid') return s.payment_status === 'paid'
-    if (filter === 'credit') return s.payment_status === 'pending' || s.payment_status === 'partial'
+    if (filter === 'paid' && s.payment_status !== 'paid') return false
+    if (filter === 'credit' && s.payment_status !== 'pending' && s.payment_status !== 'partial') return false
+    if (range.from && s.sale_date < range.from) return false
+    if (range.to && s.sale_date > range.to) return false
     return true
   })
 
@@ -230,7 +236,16 @@ export default function SalesPage() {
         <Link to="/sales/new"><Button><Plus className="w-4 h-4" /> {t('newSale')}</Button></Link>
       </div>
 
-      <FilterChips options={chips} value={filter} onChange={setFilter} className="mb-5" />
+      <div className="space-y-3 mb-5">
+        <PeriodPicker
+          value={period}
+          onChange={setPeriod}
+          customFrom={customFrom}
+          customTo={customTo}
+          onCustomChange={(f, to) => { setCustomFrom(f); setCustomTo(to) }}
+        />
+        <FilterChips options={chips} value={filter} onChange={setFilter} />
+      </div>
 
       {loading ? (
         <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-20" />)}</div>

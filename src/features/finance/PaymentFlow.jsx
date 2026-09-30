@@ -122,7 +122,7 @@ export default function PaymentFlow() {
         </button>
         <h1 className="font-semibold">Record payment</h1>
       </div>
-      <div className="flex-1 p-4 space-y-3">
+      <div className="flex-1 p-4 pb-28 space-y-3">
         {step === 0 && (
           <>
             <h2 className="text-lg font-medium mb-4">What kind of payment?</h2>
@@ -153,7 +153,7 @@ export default function PaymentFlow() {
           </>
         )}
       </div>
-      <div className="p-4 border-t border-[#E8E8E5] bg-white">
+      <div className="fixed bottom-0 inset-x-0 z-20 p-4 border-t border-[#E8E8E5] bg-white md:sticky md:inset-x-auto safe-area-pb">
         {step < 2 ? (
           <Button className="w-full" size="lg"
             disabled={(step === 0 && !direction) || (step === 1 && !partyId)}

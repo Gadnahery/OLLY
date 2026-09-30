@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
-import { ShoppingCart, Users, Truck, DollarSign, UsersRound, FileText, Settings } from 'lucide-react'
+import { ShoppingCart, Users, Truck, DollarSign, UsersRound, FileText, Settings, ClipboardList } from 'lucide-react'
 import { useLanguage } from '../../i18n/LanguageContext'
 
 export default function MorePage() {
   const { t } = useLanguage()
   const links = [
+    { to: '/orders', label: 'Orders', icon: ClipboardList },
     { to: '/purchases', label: t('purchases'), icon: ShoppingCart },
     { to: '/customers', label: t('customers'), icon: Users },
     { to: '/suppliers', label: t('suppliers'), icon: Truck },

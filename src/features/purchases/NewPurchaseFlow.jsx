@@ -109,7 +109,7 @@ export default function NewPurchaseFlow() {
         </div>
       </div>
 
-      <div className="flex-1 p-4 flow-enter">
+      <div className="flex-1 p-4 pb-28 flow-enter">
         {step === 0 && (
           <div className="space-y-3 pb-24">
             <h2 className="text-lg font-medium mb-4">What are you buying?</h2>
@@ -217,7 +217,7 @@ export default function NewPurchaseFlow() {
         )}
       </div>
 
-      <div className="sticky bottom-0 p-4 bg-white border-t border-[#E8E8E5]">
+      <div className="fixed bottom-0 inset-x-0 z-20 p-4 bg-white border-t border-[#E8E8E5] md:sticky md:inset-x-auto safe-area-pb">
         {step === 0 && cartItems.length > 0 && (
           <p className="text-sm text-[#707070] mb-2 tabular-nums">{cartItems.length} items · {formatMoney(total)}</p>
         )}

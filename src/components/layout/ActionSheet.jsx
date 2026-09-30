@@ -1,4 +1,4 @@
-import { Tag, ShoppingCart, Factory, DollarSign, CreditCard, UserPlus, Package } from 'lucide-react'
+import { Tag, ShoppingCart, Factory, DollarSign, CreditCard, UserPlus, Package, ClipboardList } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../../i18n/LanguageContext'
 
@@ -9,6 +9,7 @@ export function ActionSheet({ open, onClose }) {
 
   const actions = [
     { label: t('newSale'), icon: Tag, path: '/sales/new' },
+    { label: 'New order', icon: ClipboardList, path: '/orders/new' },
     { label: t('newPurchase'), icon: ShoppingCart, path: '/purchases/new' },
     { label: t('newProduction'), icon: Factory, path: '/production/new' },
     { label: t('recordPayment'), icon: CreditCard, path: '/finance/payment' },

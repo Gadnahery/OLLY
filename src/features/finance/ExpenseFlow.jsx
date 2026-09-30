@@ -68,7 +68,7 @@ export default function ExpenseFlow() {
         </button>
         <h1 className="font-semibold">New expense</h1>
       </div>
-      <div className="flex-1 p-4 space-y-5">
+      <div className="flex-1 p-4 pb-28 space-y-5">
         <div>
           <h2 className="text-sm font-medium text-[#707070] mb-2">What was it for?</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -98,7 +98,7 @@ export default function ExpenseFlow() {
         </div>
         {error && <p className="text-sm text-[#B4534A]">{error}</p>}
       </div>
-      <div className="p-4 border-t border-[#E8E8E5] bg-white">
+      <div className="fixed bottom-0 inset-x-0 z-20 p-4 border-t border-[#E8E8E5] bg-white md:sticky md:inset-x-auto safe-area-pb">
         <Button className="w-full" size="lg" loading={saving} disabled={!category || !amount} onClick={save}>
           Save expense
         </Button>

@@ -209,7 +209,7 @@ export default function NewProductionFlow() {
         </div>
       </div>
 
-      <div className="flex-1 p-4 flow-enter" key={step}>
+      <div className="flex-1 p-4 pb-28 flow-enter" key={step}>
         {step === 0 && (
           <div className="space-y-3">
             <h2 className="text-lg font-medium mb-4">What are you making?</h2>
@@ -328,7 +328,7 @@ export default function NewProductionFlow() {
         )}
       </div>
 
-      <div className="p-4 border-t border-[#E8E8E5] bg-white">
+      <div className="fixed bottom-0 inset-x-0 z-20 p-4 border-t border-[#E8E8E5] bg-white md:sticky md:inset-x-auto safe-area-pb">
         {step < 3 ? (
           <Button
             className="w-full"

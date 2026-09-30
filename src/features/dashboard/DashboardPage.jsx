@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { formatMoney } from '../../utils/format'
 import { KPICard, Card } from '../../components/ui/Card'
 import { cn } from '../../utils/cn'
+import { PeriodPicker, getPeriodRange } from '../../components/ui/PeriodPicker'
 import { useLanguage } from '../../i18n/LanguageContext'
 
 export default function DashboardPage() {
@@ -19,7 +20,11 @@ export default function DashboardPage() {
   const [recentPayments, setRecentPayments] = useState([])
   const [chartData, setChartData] = useState([])
   const [chartPeriod, setChartPeriod] = useState('30d')
+  // sync with main period picker when possible
   const [invSummary, setInvSummary] = useState({ raw: 0, packaging: 0, finished: 0 })
+  const [period, setPeriod] = useState('30d')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -65,6 +70,12 @@ export default function DashboardPage() {
     }
     load()
   }, [])
+
+
+  useEffect(() => {
+    if (period === '7d' || period === '30d') setChartPeriod(period)
+    else if (period === 'today' || period === 'yesterday') setChartPeriod('7d')
+  }, [period])
 
   useEffect(() => {
     async function loadChart() {
@@ -115,6 +126,14 @@ export default function DashboardPage() {
         <h1 className="text-2xl md:text-[32px] font-semibold tracking-tight">{greeting}, Owner.</h1>
         <p className="text-[#707070] mt-1">{t('dashboardSubtitle')} · {today}</p>
       </div>
+
+      <PeriodPicker
+        value={period}
+        onChange={setPeriod}
+        customFrom={customFrom}
+        customTo={customTo}
+        onCustomChange={(f, to) => { setCustomFrom(f); setCustomTo(to) }}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <KPICard label="Sales" value={formatMoney(metrics.revenue)} />

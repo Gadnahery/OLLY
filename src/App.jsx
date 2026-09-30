@@ -20,6 +20,8 @@ import PayrollPage from './features/payroll/PayrollPage'
 import ReportsPage from './features/reports/ReportsPage'
 import SettingsPage from './features/settings/SettingsPage'
 import MorePage from './features/more/MorePage'
+import OrdersPage from './features/orders/OrdersPage'
+import NewOrderFlow from './features/orders/NewOrderFlow'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -63,6 +65,8 @@ function AppRoutes() {
         <Route path="/payroll" element={<PayrollPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/orders/new" element={<NewOrderFlow />} />
         <Route path="/more" element={<MorePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
