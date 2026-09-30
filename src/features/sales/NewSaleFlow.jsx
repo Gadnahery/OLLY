@@ -42,11 +42,16 @@ export default function NewSaleFlow() {
       try {
         const { data: p } = await supabase
           .from('products')
-          .select('id, name, selling_price, unit, inventory_balances(quantity)')
+          .select('id, name, selling_price, unit')
           .eq('type', 'finished_good')
           .eq('is_active', true)
           .order('name')
-        const list = p || []
+        const { data: bals } = await supabase.from('inventory_balances').select('product_id, quantity')
+        const balMap = Object.fromEntries((bals || []).map((b) => [b.product_id, Number(b.quantity)]))
+        const list = (p || []).map((row) => ({
+          ...row,
+          inventory_balances: [{ quantity: balMap[row.id] ?? 0 }],
+        }))
         setProducts(list)
         await cacheSet('products_fg', list)
       } catch {

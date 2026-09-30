@@ -1,5 +1,5 @@
 /* Olly service worker — offline shell + VAPID push */
-const CACHE = 'olly-v2'
+const CACHE = 'olly-v3'
 const PRECACHE = [
   '/',
   '/index.html',

@@ -135,14 +135,11 @@ export default function SettingsPage() {
       }).select().single()
       if (error) throw error
       const opening = Number(newProduct.opening_stock) || 0
-      if (opening > 0 && prod?.id) {
-        const { error: mErr } = await supabase.from('inventory_movements').insert({
-          product_id: prod.id,
-          movement_type: 'adjustment',
-          quantity: opening,
-          unit_cost: Number(newProduct.cost_price) || 0,
-          notes: 'Opening stock',
-          reference_type: 'opening',
+      if (opening !== 0 && prod?.id) {
+        const { error: mErr } = await supabase.rpc('adjust_stock', {
+          p_product_id: prod.id,
+          p_quantity: opening,
+          p_notes: 'Opening stock',
         })
         if (mErr) throw mErr
       }
