@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
 import { cn } from '../../utils/cn'
+import { FilterChips } from '../../components/ui/FilterChips'
 
 export default function InventoryPage() {
   const { addToast } = useToast()
@@ -255,15 +256,7 @@ export default function InventoryPage() {
       <h1 className="text-2xl font-semibold tracking-tight mb-1">Inventory</h1>
       <p className="text-sm text-[#707070] mb-6">Stock, prices, adjustments · tap an item to manage</p>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-        {tabs.map((t) => (
-          <button key={t.id} onClick={() => setFilter(t.id)}
-            className={cn('px-4 py-2 rounded-full text-sm whitespace-nowrap',
-              filter === t.id ? 'bg-[#181818] text-white' : 'bg-white border border-[#E8E8E5]')}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <FilterChips options={tabs.map((x) => ({ id: x.id, label: x.label }))} value={filter} onChange={setFilter} className="mb-6" />
 
       {loading ? (
         <div className="space-y-3">{[1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-16" />)}</div>

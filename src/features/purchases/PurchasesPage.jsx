@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { formatMoney } from '../../utils/format'
+import { FilterChips } from '../../components/ui/FilterChips'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 
 export default function PurchasesPage() {
   const [purchases, setPurchases] = useState([])
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('all')
 
   useEffect(() => {
     supabase
@@ -21,7 +23,7 @@ export default function PurchasesPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Purchases</h1>
           <p className="text-sm text-[#707070] mt-0.5">Buy raw materials and packaging</p>
@@ -29,9 +31,20 @@ export default function PurchasesPage() {
         <Link to="/purchases/new"><Button><Plus className="w-4 h-4" /> New purchase</Button></Link>
       </div>
 
+      <FilterChips
+        options={[
+          { id: 'all', label: 'All' },
+          { id: 'paid', label: 'Paid' },
+          { id: 'pending', label: 'Unpaid / partial' },
+        ]}
+        value={filter}
+        onChange={setFilter}
+        className="mb-5"
+      />
+
       {loading ? (
         <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-20" />)}</div>
-      ) : purchases.length === 0 ? (
+      ) : (filter === 'all' ? purchases : purchases.filter(p => filter === 'paid' ? p.payment_status === 'paid' : p.payment_status !== 'paid')).length === 0 ? (
         <Card className="text-center py-12">
           <p className="text-[#707070] mb-4">No purchases yet</p>
           <Link to="/purchases/new"><Button>Record first purchase</Button></Link>
@@ -49,7 +62,7 @@ export default function PurchasesPage() {
                 </tr>
               </thead>
               <tbody>
-                {purchases.map((p) => (
+                {(filter === 'all' ? purchases : purchases.filter(p => filter === 'paid' ? p.payment_status === 'paid' : p.payment_status !== 'paid')).map((p) => (
                   <tr key={p.id} className="border-b border-[#E8E8E5] last:border-0 hover:bg-[#F7F7F5]">
                     <td className="px-5 py-3.5">{p.purchase_date}</td>
                     <td className="px-5 py-3.5">{p.suppliers?.name || '—'}</td>
@@ -67,7 +80,7 @@ export default function PurchasesPage() {
             </table>
           </div>
           <div className="md:hidden space-y-3">
-            {purchases.map((p) => (
+            {(filter === 'all' ? purchases : purchases.filter(p => filter === 'paid' ? p.payment_status === 'paid' : p.payment_status !== 'paid')).map((p) => (
               <Card key={p.id} className="!p-4">
                 <div className="flex justify-between">
                   <div>

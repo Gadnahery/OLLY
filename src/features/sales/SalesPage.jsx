@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, ArrowLeft, Trash2 } from 'lucide-react'
+import { Plus, ArrowLeft, Trash2, Pencil } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { formatMoney } from '../../utils/format'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Modal } from '../../components/ui/Modal'
+import { Input } from '../../components/ui/Input'
+import { FilterChips } from '../../components/ui/FilterChips'
 import { useToast } from '../../components/ui/Toast'
 import { useLanguage } from '../../i18n/LanguageContext'
+import { SelectionCard } from '../../components/ui/SelectionCard'
 
 export default function SalesPage() {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const { addToast } = useToast()
   const [sales, setSales] = useState([])
   const [loading, setLoading] = useState(true)
@@ -19,20 +22,29 @@ export default function SalesPage() {
   const [items, setItems] = useState([])
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [filter, setFilter] = useState('all')
+  const [customers, setCustomers] = useState([])
+  const [editForm, setEditForm] = useState({ customer_id: null, payment_method: 'cash', paid_amount: 0, payment_status: 'paid' })
 
   async function load() {
     setLoading(true)
     const { data } = await supabase
       .from('sales')
-      .select('id, invoice_number, sale_date, total_amount, paid_amount, payment_status, payment_method, cogs_amount, customers(name)')
+      .select('id, invoice_number, sale_date, total_amount, paid_amount, payment_status, payment_method, cogs_amount, customer_id, customers(name)')
       .neq('payment_status', 'cancelled')
       .order('created_at', { ascending: false })
-      .limit(50)
+      .limit(100)
     setSales(data || [])
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    supabase.from('customers').select('id, name').eq('is_active', true).order('name')
+      .then(({ data }) => setCustomers(data || []))
+  }, [])
 
   async function openDetail(s) {
     setSelected(s)
@@ -41,6 +53,52 @@ export default function SalesPage() {
       .select('quantity, unit_price, unit_cost, products(name)')
       .eq('sale_id', s.id)
     setItems(data || [])
+  }
+
+  function openEdit() {
+    if (!selected) return
+    setEditForm({
+      customer_id: selected.customer_id || null,
+      payment_method: selected.payment_method || 'cash',
+      paid_amount: Number(selected.paid_amount || 0),
+      payment_status: selected.payment_status || 'paid',
+    })
+    setEditing(true)
+  }
+
+  async function saveEdit() {
+    if (!selected) return
+    setSaving(true)
+    try {
+      const paid = Number(editForm.paid_amount) || 0
+      const total = Number(selected.total_amount)
+      let status = editForm.payment_status
+      if (editForm.payment_method === 'credit' && paid <= 0) status = 'pending'
+      else if (paid >= total) status = 'paid'
+      else if (paid > 0) status = 'partial'
+      else status = 'pending'
+
+      const { error } = await supabase.from('sales').update({
+        customer_id: editForm.customer_id,
+        payment_method: editForm.payment_method,
+        paid_amount: paid,
+        payment_status: status,
+        updated_at: new Date().toISOString(),
+      }).eq('id', selected.id)
+      if (error) throw error
+      addToast(lang === 'sw' ? 'Uuzaji umesasishwa' : 'Sale updated')
+      setEditing(false)
+      const updated = { ...selected, ...editForm, paid_amount: paid, payment_status: status,
+        customers: customers.find((c) => c.id === editForm.customer_id)
+          ? { name: customers.find((c) => c.id === editForm.customer_id).name }
+          : null }
+      setSelected(updated)
+      await load()
+    } catch (e) {
+      addToast(e.message, 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleDelete() {
@@ -59,6 +117,19 @@ export default function SalesPage() {
       setDeleting(false)
     }
   }
+
+  const filtered = sales.filter((s) => {
+    if (filter === 'all') return true
+    if (filter === 'paid') return s.payment_status === 'paid'
+    if (filter === 'credit') return s.payment_status === 'pending' || s.payment_status === 'partial'
+    return true
+  })
+
+  const chips = [
+    { id: 'all', label: lang === 'sw' ? 'Zote' : 'All' },
+    { id: 'paid', label: lang === 'sw' ? 'Zimelipwa' : 'Paid' },
+    { id: 'credit', label: lang === 'sw' ? 'Mkopo' : 'Credit / partial' },
+  ]
 
   if (selected) {
     const gross = Number(selected.total_amount) - Number(selected.cogs_amount || 0)
@@ -93,10 +164,50 @@ export default function SalesPage() {
             <span>{t('grossProfit')}</span>
             <span className="tabular-nums">{formatMoney(gross)}</span>
           </div>
+          <div className="flex justify-between text-sm text-[#707070]">
+            <span>{t('payment')}</span>
+            <span className="capitalize">{selected.payment_method?.replace('_', ' ')} · {formatMoney(selected.paid_amount)}</span>
+          </div>
         </Card>
-        <Button variant="secondary" className="w-full text-[#B4534A]" onClick={() => setConfirmDelete(true)}>
-          <Trash2 className="w-4 h-4" /> {t('delete')}
-        </Button>
+
+        <div className="flex gap-2 mb-3">
+          <Button variant="secondary" className="flex-1" onClick={openEdit}>
+            <Pencil className="w-4 h-4" /> {t('edit')}
+          </Button>
+          <Button variant="secondary" className="flex-1 text-[#B4534A]" onClick={() => setConfirmDelete(true)}>
+            <Trash2 className="w-4 h-4" /> {t('delete')}
+          </Button>
+        </div>
+        <p className="text-xs text-[#707070] text-center">
+          {lang === 'sw'
+            ? 'Hariri malipo au mteja. Ikiwa bidhaa zilikosewa, futa na unda uuzaji mpya.'
+            : 'Edit payment or customer. If products were wrong, delete and record a new sale.'}
+        </p>
+
+        <Modal open={editing} onClose={() => setEditing(false)} title={lang === 'sw' ? 'Hariri uuzaji' : 'Edit sale'}>
+          <div className="space-y-3">
+            <p className="text-sm text-[#707070]">{lang === 'sw' ? 'Mteja' : 'Customer'}</p>
+            <SelectionCard title={t('walkIn')} selected={!editForm.customer_id}
+              onClick={() => setEditForm({ ...editForm, customer_id: null })} />
+            {customers.map((c) => (
+              <SelectionCard key={c.id} title={c.name} selected={editForm.customer_id === c.id}
+                onClick={() => setEditForm({ ...editForm, customer_id: c.id })} />
+            ))}
+            <p className="text-sm text-[#707070] pt-2">{t('payment')}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {['cash', 'mobile_money', 'bank', 'credit'].map((m) => (
+                <SelectionCard key={m}
+                  title={m === 'mobile_money' ? t('mobileMoney') : t(m) || m}
+                  selected={editForm.payment_method === m}
+                  onClick={() => setEditForm({ ...editForm, payment_method: m })} />
+              ))}
+            </div>
+            <Input label={lang === 'sw' ? 'Kiasi kilicholipwa' : 'Amount paid'} type="number"
+              value={editForm.paid_amount}
+              onChange={(e) => setEditForm({ ...editForm, paid_amount: e.target.value })} />
+            <Button className="w-full" loading={saving} onClick={saveEdit}>{t('save')}</Button>
+          </div>
+        </Modal>
 
         <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)} title={t('delete')}>
           <p className="text-sm text-[#707070] mb-4">{t('confirmDeleteSale')}</p>
@@ -111,20 +222,22 @@ export default function SalesPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t('sales')}</h1>
-          <p className="text-sm text-[#707070] mt-0.5">Record and track sales</p>
+          <p className="text-sm text-[#707070] mt-0.5">{lang === 'sw' ? 'Rekodi na fuatilia mauzo' : 'Record and track sales'}</p>
         </div>
         <Link to="/sales/new"><Button><Plus className="w-4 h-4" /> {t('newSale')}</Button></Link>
       </div>
 
+      <FilterChips options={chips} value={filter} onChange={setFilter} className="mb-5" />
+
       {loading ? (
         <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-20" />)}</div>
-      ) : sales.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <Card className="text-center py-12">
-          <p className="text-[#707070] mb-4">{t('noSales')}</p>
-          <Link to="/sales/new"><Button>{t('recordFirstSale')}</Button></Link>
+          <p className="text-[#707070] mb-4">{sales.length === 0 ? t('noSales') : (lang === 'sw' ? 'Hakuna katika kichujio hiki' : 'Nothing in this filter')}</p>
+          {sales.length === 0 && <Link to="/sales/new"><Button>{t('recordFirstSale')}</Button></Link>}
         </Card>
       ) : (
         <>
@@ -140,7 +253,7 @@ export default function SalesPage() {
                 </tr>
               </thead>
               <tbody>
-                {sales.map((s) => (
+                {filtered.map((s) => (
                   <tr key={s.id} onClick={() => openDetail(s)} className="border-b border-[#E8E8E5] last:border-0 hover:bg-[#F7F7F5] cursor-pointer">
                     <td className="px-5 py-3.5">{s.sale_date}</td>
                     <td className="px-5 py-3.5">{s.customers?.name || t('walkIn')}</td>
@@ -153,7 +266,7 @@ export default function SalesPage() {
             </table>
           </div>
           <div className="md:hidden space-y-3">
-            {sales.map((s) => (
+            {filtered.map((s) => (
               <button key={s.id} onClick={() => openDetail(s)} className="w-full text-left">
                 <Card className="!p-4">
                   <div className="flex justify-between items-start">

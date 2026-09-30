@@ -7,12 +7,14 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { cn } from '../../utils/cn'
+import { FilterChips } from '../../components/ui/FilterChips'
 
 export default function ProductionPage() {
   const [batches, setBatches] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [consumptions, setConsumptions] = useState([])
+  const [statusFilter, setStatusFilter] = useState('all')
 
   useEffect(() => {
     supabase.from('production_batches')
@@ -113,6 +115,17 @@ export default function ProductionPage() {
         <Link to="/production/new"><Button><Plus className="w-4 h-4" /> New production</Button></Link>
       </div>
 
+      <FilterChips
+        options={[
+          { id: 'all', label: 'All' },
+          { id: 'in_progress', label: 'In progress' },
+          { id: 'completed', label: 'Completed' },
+        ]}
+        value={statusFilter}
+        onChange={setStatusFilter}
+        className="mb-5"
+      />
+
       {loading ? (
         <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="skeleton h-20" />)}</div>
       ) : batches.length === 0 ? (
@@ -122,7 +135,7 @@ export default function ProductionPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {batches.map((b) => (
+          {(statusFilter === 'all' ? batches : batches.filter(b => b.status === statusFilter)).map((b) => (
             <button key={b.id} onClick={() => openDetail(b)} className="w-full text-left">
               <Card className="!p-4 flex justify-between items-center hover:border-[#C8C8C5] transition-colors">
                 <div>
