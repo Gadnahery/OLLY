@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#181818" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Olly</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #F7F7F5;
+      --ink: #181818;
+      --muted: #707070;
+      --line: #E8E8E5;
+      --white: #fff;
+      --radius: 14px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      min-height: 100%;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    body { padding-bottom: var(--safe-bottom); }
+    .page {
+      display: none;
+      min-height: 100dvh;
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 16px 24px calc(24px + var(--safe-bottom));
+      flex-direction: column;
+    }
+    .page.active { display: flex; }
+    .spacer { flex: 1; }
+    .spacer-2 { flex: 2; }
+    .spacer-3 { flex: 3; }
+
+    /* Brand */
+    .mark {
+      width: 88px; height: 88px;
+      background: var(--ink);
+      border-radius: 24px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 40px; font-weight: 700;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
+      text-align: center; margin-top: 24px;
+    }
+    h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .sub {
+      text-align: center; color: var(--muted); font-size: 16px;
+      line-height: 1.45; margin-top: 8px;
+    }
+    .muted { color: var(--muted); font-size: 14px; }
+
+    /* Buttons */
+    .btn {
+      display: flex; align-items: center; justify-content: center;
+      height: 52px; width: 100%; border-radius: var(--radius);
+      font-size: 16px; font-weight: 600; border: none; cursor: pointer;
+      font-family: inherit; transition: opacity .15s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.6; }
+    .btn-primary { background: var(--ink); color: #fff; }
+    .btn-outline {
+      background: transparent; color: var(--ink);
+      border: 1.5px solid var(--line); margin-top: 12px;
+    }
+    .btn-text {
+      background: none; border: none; color: var(--ink);
+      font-weight: 600; font-size: 14px; padding: 8px 4px;
+      font-family: inherit; cursor: pointer;
+    }
+
+    /* Form */
+    .field { margin-bottom: 16px; }
+    label {
+      display: block; font-size: 13px; color: var(--muted);
+      margin-bottom: 6px; font-weight: 500;
+    }
+    .input-wrap { position: relative; }
+    input {
+      width: 100%; height: 52px; padding: 0 16px;
+      border: 1.5px solid var(--line); border-radius: var(--radius);
+      background: var(--white); font-size: 16px; font-family: inherit;
+      color: var(--ink); outline: none;
+    }
+    input:focus { border-color: var(--ink); }
+    input.error { border-color: #B4534A; }
+    .err { color: #B4534A; font-size: 12px; margin-top: 6px; display: none; }
+    .err.show { display: block; }
+    .eye {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; padding: 8px; color: var(--muted);
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .row-between {
+      display: flex; justify-content: flex-end; margin: -4px 0 16px;
+    }
+    .footer-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px; margin-top: 24px; flex-wrap: wrap;
+    }
+    .back {
+      width: 40px; height: 40px; border: none; background: none;
+      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 22px; color: var(--ink);
+    }
+    .topbar { margin: 0 -8px 8px; }
+    .spin {
+      width: 22px; height: 22px; border: 2.5px solid rgba(255,255,255,.35);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Entrance */
+    .fade-in {
+      animation: fadeUp .55s ease-out both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .toast {
+      position: fixed; left: 50%; bottom: calc(24px + var(--safe-bottom));
+      transform: translateX(-50%) translateY(80px);
+      background: var(--ink); color: #fff; padding: 12px 18px;
+      border-radius: 12px; font-size: 14px; max-width: 90%;
+      transition: transform .25s ease; z-index: 50;
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .hint {
+      text-align: center; color: var(--muted); font-size: 13px; margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- WELCOME -->
+  <div id="welcome" class="page active">
+    <div class="spacer-2"></div>
+    <div class="fade-in">
+      <div class="mark">O</div>
+      <h1>Olly</h1>
+      <p class="sub">Run sales, stock, and production<br/>with clarity — offline when you need it.</p>
+    </div>
+    <div class="spacer-3"></div>
+    <button class="btn btn-primary" onclick="go('signin')">Sign in</button>
+    <button class="btn btn-outline" onclick="go('signup')">Create account</button>
+    <p class="hint">For food-processing businesses</p>
+  </div>
+
+  <!-- SIGN IN -->
+  <div id="signin" class="page">
+    <div class="topbar"><button class="back" onclick="go('welcome')" aria-label="Back">←</button></div>
+    <h2>Welcome back</h2>
+    <p class="muted" style="margin-bottom:32px">Sign in to continue to Olly</p>
+    <div class="field">
+      <label for="si-email">Email</label>
+      <input id="si-email" type="email" inputmode="email" autocomplete="email" placeholder="you@business.com" />
+      <div class="err" id="si-email-err">Enter a valid email</div>
+    </div>
+    <div class="field">
+      <label for="si-pass">Password</label>
+      <div class="input-wrap">
+        <input id="si-pass" type="password" autocomplete="current-password" placeholder="••••••••" />
+        <button type="button" class="eye" onclick="togglePass('si-pass', this)">Show</button>
+      </div>
+      <div class="err" id="si-pass-err">At least 6 characters</div>
+    </div>
+    <div class="row-between">
+      <button class="btn-text" onclick="toast('Password reset coming soon')">Forgot password?</button>
+    </div>
+    <button class="btn btn-primary" id="si-btn" onclick="submitSignIn()">Sign in</button>
+    <div class="footer-row">
+      <span class="muted">New to Olly?</span>
+      <button class="btn-text" onclick="go('signup')">Create account</button>
+    </div>
+  </div>
+
+  <!-- SIGN UP -->
+  <div id="signup" class="page">
+    <div class="topbar"><button class="back" onclick="go('welcome')" aria-label="Back">←</button></div>
+    <h2>Create account</h2>
+    <p class="muted" style="margin-bottom:32px">Start managing your business with Olly</p>
+    <div class="field">
+      <label for="su-name">Full name</label>
+      <input id="su-name" type="text" autocomplete="name" placeholder="Your name" />
+      <div class="err" id="su-name-err">Enter your name</div>
+    </div>
+    <div class="field">
+      <label for="su-email">Email</label>
+      <input id="su-email" type="email" inputmode="email" autocomplete="email" placeholder="you@business.com" />
+      <div class="err" id="su-email-err">Enter a valid email</div>
+    </div>
+    <div class="field">
+      <label for="su-pass">Password</label>
+      <div class="input-wrap">
+        <input id="su-pass" type="password" autocomplete="new-password" placeholder="At least 6 characters" />
+        <button type="button" class="eye" onclick="togglePass('su-pass', this)">Show</button>
+      </div>
+      <div class="err" id="su-pass-err">At least 6 characters</div>
+    </div>
+    <div style="height:16px"></div>
+    <button class="btn btn-primary" id="su-btn" onclick="submitSignUp()">Create account</button>
+    <div class="footer-row">
+      <span class="muted">Already have an account?</span>
+      <button class="btn-text" onclick="go('signin')">Sign in</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    function go(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      window.scrollTo(0, 0);
+    }
+    function togglePass(id, btn) {
+      const el = document.getElementById(id);
+      const show = el.type === 'password';
+      el.type = show ? 'text' : 'password';
+      btn.textContent = show ? 'Hide' : 'Show';
+    }
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+    function setLoading(btn, on) {
+      btn.disabled = on;
+      btn.dataset.label = btn.dataset.label || btn.textContent;
+      btn.innerHTML = on ? '<div class="spin"></div>' : btn.dataset.label;
+    }
+    function submitSignIn() {
+      const email = document.getElementById('si-email');
+      const pass = document.getElementById('si-pass');
+      let ok = true;
+      document.getElementById('si-email-err').classList.toggle('show', !email.value.includes('@'));
+      document.getElementById('si-pass-err').classList.toggle('show', pass.value.length < 6);
+      if (!email.value.includes('@') || pass.value.length < 6) ok = false;
+      if (!ok) return;
+      const btn = document.getElementById('si-btn');
+      setLoading(btn, true);
+      setTimeout(() => {
+        setLoading(btn, false);
+        toast('Signed in (preview) — Flutter app is ready on GitHub');
+      }, 900);
+    }
+    function submitSignUp() {
+      const name = document.getElementById('su-name');
+      const email = document.getElementById('su-email');
+      const pass = document.getElementById('su-pass');
+      document.getElementById('su-name-err').classList.toggle('show', !name.value.trim());
+      document.getElementById('su-email-err').classList.toggle('show', !email.value.includes('@'));
+      document.getElementById('su-pass-err').classList.toggle('show', pass.value.length < 6);
+      if (!name.value.trim() || !email.value.includes('@') || pass.value.length < 6) return;
+      const btn = document.getElementById('su-btn');
+      setLoading(btn, true);
+      setTimeout(() => {
+        setLoading(btn, false);
+        toast('Account created (preview) — connect Supabase next');
+      }, 900);
+    }
+  </script>
+</body>
+</html>
